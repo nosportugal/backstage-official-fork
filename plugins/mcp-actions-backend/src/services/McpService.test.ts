@@ -98,7 +98,7 @@ describe('McpService', () => {
           required: ['input'],
           type: 'object',
         },
-        name: 'test.mock-action',
+        name: 'test_mock_action',
       },
     ]);
 
@@ -236,7 +236,7 @@ describe('McpService', () => {
     );
 
     expect(first.tools).toHaveLength(1);
-    expect(first.tools[0].name).toBe('plugin.valid');
+    expect(first.tools[0].name).toBe('plugin_valid');
     expect(second.tools).toHaveLength(1);
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('plugin:bad-type'),
@@ -290,7 +290,7 @@ describe('McpService', () => {
     const result = await client.request(
       {
         method: 'tools/call',
-        params: { name: 'test.mock-action', arguments: { input: 'test' } },
+        params: { name: 'test_mock_action', arguments: { input: 'test' } },
       },
       CallToolResultSchema,
     );
@@ -317,7 +317,7 @@ describe('McpService', () => {
       expect.any(Number),
       expect.objectContaining({
         'mcp.method.name': 'tools/call',
-        'gen_ai.tool.name': 'test.mock-action',
+        'gen_ai.tool.name': 'test_mock_action',
         'gen_ai.operation.name': 'execute_tool',
       }),
     );
@@ -422,7 +422,7 @@ describe('McpService', () => {
       client.request(
         {
           method: 'tools/call',
-          params: { name: 'test.failing-action', arguments: {} },
+          params: { name: 'test_failing_action', arguments: {} },
         },
         CallToolResultSchema,
       ),
@@ -434,7 +434,7 @@ describe('McpService', () => {
       expect.any(Number),
       expect.objectContaining({
         'mcp.method.name': 'tools/call',
-        'gen_ai.tool.name': 'test.failing-action',
+        'gen_ai.tool.name': 'test_failing_action',
         'gen_ai.operation.name': 'execute_tool',
         'error.type': 'CustomError',
       }),
@@ -482,7 +482,7 @@ describe('McpService', () => {
     const result = await client.request(
       {
         method: 'tools/call',
-        params: { name: 'test.failing-action', arguments: { value: 'test' } },
+        params: { name: 'test_failing_action', arguments: { value: 'test' } },
       },
       CallToolResultSchema,
     );
@@ -539,7 +539,7 @@ describe('McpService', () => {
     const result = await client.request(
       {
         method: 'tools/call',
-        params: { name: 'test.not-found-action', arguments: { id: 'abc' } },
+        params: { name: 'test_not_found_action', arguments: { id: 'abc' } },
       },
       CallToolResultSchema,
     );
@@ -671,8 +671,8 @@ describe('McpService', () => {
 
       expect(result.tools).toHaveLength(2);
       expect(result.tools.map(t => t.name)).toEqual([
-        'catalog.get-entity',
-        'catalog.delete-entity',
+        'catalog_get_entity',
+        'catalog_delete_entity',
       ]);
     });
 
@@ -712,7 +712,7 @@ describe('McpService', () => {
       );
 
       expect(result.tools).toHaveLength(1);
-      expect(result.tools[0].name).toBe('catalog.get-entity');
+      expect(result.tools[0].name).toBe('catalog_get_entity');
     });
 
     it('should apply include filter rules with glob patterns', async () => {
@@ -751,7 +751,7 @@ describe('McpService', () => {
       );
 
       expect(result.tools).toHaveLength(1);
-      expect(result.tools[0].name).toBe('catalog.get-entity');
+      expect(result.tools[0].name).toBe('catalog_get_entity');
     });
 
     it('should reject tool calls for actions outside the filtered set', async () => {
@@ -892,7 +892,7 @@ describe('McpService', () => {
   });
 
   describe('namespaced tool names', () => {
-    it('should use action ID as tool name by default', async () => {
+    it('should expose the snake_case namespaced name as tool name by default', async () => {
       const mockActionsRegistry = actionsRegistryServiceMock();
       mockActionsRegistry.register({
         name: 'mock-action',
@@ -928,10 +928,10 @@ describe('McpService', () => {
         ListToolsResultSchema,
       );
 
-      expect(result.tools[0].name).toBe('test.mock-action');
+      expect(result.tools[0].name).toBe('test_mock_action');
     });
 
-    it('should use short action name when namespacing is disabled', async () => {
+    it('should use short snake_case action name when namespacing is disabled', async () => {
       const mockActionsRegistry = actionsRegistryServiceMock();
       mockActionsRegistry.register({
         name: 'mock-action',
@@ -968,10 +968,10 @@ describe('McpService', () => {
         ListToolsResultSchema,
       );
 
-      expect(result.tools[0].name).toBe('mock-action');
+      expect(result.tools[0].name).toBe('mock_action');
     });
 
-    it('should match tool calls using the namespaced name', async () => {
+    it('should match tool calls using the snake_case namespaced name', async () => {
       const mockActionsRegistry = actionsRegistryServiceMock();
       mockActionsRegistry.register({
         name: 'mock-action',
@@ -1005,12 +1005,58 @@ describe('McpService', () => {
       const result = await client.request(
         {
           method: 'tools/call',
+          params: { name: 'test_mock_action', arguments: {} },
+        },
+        CallToolResultSchema,
+      );
+
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should still match tool calls using the legacy dotted/hyphenated name for backward compatibility', async () => {
+      const mockActionsRegistry = actionsRegistryServiceMock();
+      const mockAction = jest.fn(async () => ({ output: {} }));
+      mockActionsRegistry.register({
+        name: 'mock-action',
+        title: 'Test',
+        description: 'Test',
+        schema: {
+          input: z => z.object({}),
+          output: z => z.object({}),
+        },
+        action: mockAction,
+      });
+
+      const mcpService = await McpService.create({
+        actions: mockActionsRegistry,
+        metrics: metricsServiceMock.mock(),
+        tracingService: tracingServiceMock.mock(),
+      });
+
+      const server = mcpService.getServer({
+        credentials: mockCredentials.user(),
+      });
+
+      const client = new Client({ name: 'test', version: '1.0' });
+      const [clientTransport, serverTransport] =
+        InMemoryTransport.createLinkedPair();
+      await Promise.all([
+        client.connect(clientTransport),
+        server.connect(serverTransport),
+      ]);
+
+      const result = await client.request(
+        {
+          method: 'tools/call',
+          // The legacy name format that earlier versions exposed and that
+          // clients may still have cached.
           params: { name: 'test.mock-action', arguments: {} },
         },
         CallToolResultSchema,
       );
 
       expect(result.isError).toBeUndefined();
+      expect(mockAction).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -1056,7 +1102,7 @@ describe('McpService', () => {
       return client.request(
         {
           method: 'tools/call',
-          params: { name: 'test.mock-action', arguments: { input: 'val' } },
+          params: { name: 'test_mock_action', arguments: { input: 'val' } },
         },
         CallToolResultSchema,
       );
@@ -1069,12 +1115,12 @@ describe('McpService', () => {
 
       expect(tracing.startActiveSpan).toHaveBeenCalledTimes(1);
       const [name, options] = tracing.startActiveSpan.mock.calls[0];
-      expect(name).toBe('tools/call test.mock-action');
+      expect(name).toBe('tools/call test_mock_action');
       expect(options?.kind).toBe('server');
       expect(options?.attributes).toEqual(
         expect.objectContaining({
           'mcp.method.name': 'tools/call',
-          'gen_ai.tool.name': 'test.mock-action',
+          'gen_ai.tool.name': 'test_mock_action',
           'gen_ai.operation.name': 'execute_tool',
         }),
       );
@@ -1230,7 +1276,7 @@ describe('McpService', () => {
         {
           method: 'tools/call',
           params: {
-            name: 'test.failing-action',
+            name: 'test_failing_action',
             arguments: { value: 'test' },
           },
         },

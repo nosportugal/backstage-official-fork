@@ -48,6 +48,19 @@ function safeStringify(value: unknown): string {
   }
 }
 
+// Normalizes a tool name to snake_case for broad LLM client compatibility.
+//
+// The MCP spec treats tool names as opaque strings, but LLM client
+// implementations vary in how strictly they parse them. Anthropic Claude and
+// Google Gemini reject names containing characters such as `.` or `-`, which
+// breaks tool calling for the namespaced (`pluginId.action-name`) and
+// hyphenated action names commonly used in Backstage. Underscores are accepted
+// across all tested providers, so we replace any run of characters outside the
+// `[A-Za-z0-9_]` set with a single underscore.
+function snakeCaseToolName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9_]+/g, '_');
+}
+
 // Baggage is propagated from untrusted callers, so we forward only an
 // explicit allowlist of low-cardinality identifier keys from the OTel
 // `gen_ai.*` registry.
@@ -244,7 +257,12 @@ export class McpService {
                 : allActions;
 
               const action = actions.find(
-                a => this.getToolName(a) === params.name,
+                a =>
+                  this.getToolName(a) === params.name ||
+                  // Backward compatibility: resolve tool calls that still use
+                  // the un-normalized name (e.g. `pluginId.action-name`) that
+                  // earlier versions exposed and clients may have cached.
+                  this.getLegacyToolName(a) === params.name,
               );
 
               if (!action) {
@@ -340,6 +358,12 @@ export class McpService {
   }
 
   private getToolName(action: ActionsServiceAction): string {
+    return snakeCaseToolName(this.getLegacyToolName(action));
+  }
+
+  // The previously exposed, un-normalized tool name. Retained so that
+  // `tools/call` can still route requests that use the old name format.
+  private getLegacyToolName(action: ActionsServiceAction): string {
     if (this.namespacedToolNames) {
       return `${action.pluginId}.${action.name}`;
     }
