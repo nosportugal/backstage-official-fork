@@ -90,6 +90,8 @@ Tool names are normalized to `snake_case` before they are exposed: the plugin ID
 
 For backward compatibility, `tools/call` requests still resolve actions referenced by their previous, un-normalized name (for example `my-custom-plugin.greet-user`), so existing clients continue to work without changes.
 
+If two actions normalize to the same tool name, only the first is listed under that name and a warning is logged identifying both actions, so the collision can be resolved by renaming one of them.
+
 ### Multiple MCP Servers
 
 By default, the plugin serves a single MCP server at `/api/mcp-actions/v1` that exposes all available actions. You can split actions into multiple focused servers by configuring `mcpActions.servers`, where each key becomes a separate MCP server endpoint.

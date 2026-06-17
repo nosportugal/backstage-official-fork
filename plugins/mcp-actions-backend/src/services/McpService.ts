@@ -100,6 +100,7 @@ export class McpService {
   private readonly captureToolPayloads: boolean;
   private readonly operationDuration: MetricsServiceHistogram<McpServerOperationAttributes>;
   private readonly warnedSkippedActionIds = new Set<string>();
+  private readonly warnedCollisionToolNames = new Set<string>();
 
   constructor(
     actions: ActionsService,
@@ -181,10 +182,28 @@ export class McpService {
           : allActions;
 
         const tools: Tool[] = [];
+        // Tracks which action each emitted tool name belongs to, so that two
+        // actions whose names normalize to the same snake_case tool name (e.g.
+        // `catalog`/`get-entity` and `catalog-get`/`entity`) don't both appear
+        // in the list under a single, ambiguous name.
+        const toolNameOwners = new Map<string, string>();
         for (const action of actions) {
+          const name = this.getToolName(action);
+
+          const owningActionId = toolNameOwners.get(name);
+          if (owningActionId !== undefined && owningActionId !== action.id) {
+            if (!this.warnedCollisionToolNames.has(name)) {
+              this.warnedCollisionToolNames.add(name);
+              this.logger?.warn(
+                `Skipping MCP tool for action "${action.id}": tool name "${name}" already maps to action "${owningActionId}". Tool names must be unique after snake_case normalization; consider renaming one of the actions.`,
+              );
+            }
+            continue;
+          }
+
           const tool = {
             inputSchema: action.schema.input,
-            name: this.getToolName(action),
+            name,
             description: action.description,
             annotations: {
               title: action.title,
@@ -209,6 +228,7 @@ export class McpService {
             continue;
           }
 
+          toolNameOwners.set(name, action.id);
           tools.push(parsed.data);
         }
 

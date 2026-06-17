@@ -248,6 +248,83 @@ describe('McpService', () => {
     expect(logger.warn).toHaveBeenCalledTimes(2);
   });
 
+  it('should skip actions whose snake_case tool name collides with an earlier action', async () => {
+    // Both of these normalize to the tool name `catalog_get_entity`.
+    const firstAction = {
+      id: 'catalog:get-entity',
+      pluginId: 'catalog',
+      name: 'get-entity',
+      title: 'Get Entity',
+      description: 'Fetch an entity',
+      schema: {
+        input: { type: 'object' as const },
+        output: { type: 'object' as const },
+      },
+      attributes: { destructive: false, readOnly: true, idempotent: true },
+    };
+    const collidingAction = {
+      id: 'catalog-get:entity',
+      pluginId: 'catalog-get',
+      name: 'entity',
+      title: 'Entity',
+      description: 'Also maps to catalog_get_entity',
+      schema: {
+        input: { type: 'object' as const },
+        output: { type: 'object' as const },
+      },
+      attributes: { destructive: false, readOnly: true, idempotent: true },
+    };
+
+    const fakeActions: ActionsService = {
+      list: jest.fn(async () => ({
+        actions: [firstAction, collidingAction],
+      })),
+      invoke: jest.fn(async () => ({ output: {} })),
+    };
+
+    const logger = mockServices.logger.mock();
+    const mcpService = await McpService.create({
+      actions: fakeActions,
+      metrics: metricsServiceMock.mock(),
+      tracingService: tracingServiceMock.mock(),
+      logger,
+    });
+
+    const server = mcpService.getServer({
+      credentials: mockCredentials.user(),
+    });
+
+    const client = new Client({ name: 'test', version: '1.0' });
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    await Promise.all([
+      client.connect(clientTransport),
+      server.connect(serverTransport),
+    ]);
+
+    const first = await client.request(
+      { method: 'tools/list' },
+      ListToolsResultSchema,
+    );
+    const second = await client.request(
+      { method: 'tools/list' },
+      ListToolsResultSchema,
+    );
+
+    // Only the first action keeps the shared tool name.
+    expect(first.tools).toHaveLength(1);
+    expect(first.tools[0].name).toBe('catalog_get_entity');
+    expect(second.tools).toHaveLength(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('catalog-get:entity'),
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('catalog:get-entity'),
+    );
+    // The collision should only be logged once across repeated listings.
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+  });
+
   it('should call the action when the tool is invoked', async () => {
     const mockActionsRegistry = actionsRegistryServiceMock();
     const mockAction = jest.fn(async () => ({ output: { output: 'test' } }));
