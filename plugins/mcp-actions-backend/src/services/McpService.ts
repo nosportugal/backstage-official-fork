@@ -192,8 +192,9 @@ export class McpService {
 
           const owningActionId = toolNameOwners.get(name);
           if (owningActionId !== undefined && owningActionId !== action.id) {
-            if (!this.warnedCollisionToolNames.has(name)) {
-              this.warnedCollisionToolNames.add(name);
+            const collisionKey = `${name}:${action.id}`;
+            if (!this.warnedCollisionToolNames.has(collisionKey)) {
+              this.warnedCollisionToolNames.add(collisionKey);
               this.logger?.warn(
                 `Skipping MCP tool for action "${action.id}": tool name "${name}" already maps to action "${owningActionId}". Tool names must be unique after snake_case normalization; consider renaming one of the actions.`,
               );
