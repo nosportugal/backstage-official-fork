@@ -86,7 +86,7 @@ With namespacing disabled, the same action is exposed as `greet_user`.
 
 #### Tool Name Normalization
 
-Tool names are normalized to `snake_case` before they are exposed: the plugin ID separator (`.`) and any hyphens (`-`) in plugin IDs or action names are replaced with underscores (`_`). While the MCP specification treats tool names as opaque strings, some LLM clients (such as Anthropic Claude and Google Gemini) reject names that contain `.` or `-`, whereas `_` is accepted across all tested providers.
+Tool names are normalized to `snake_case` before they are exposed: any run of characters other than letters, digits, or underscores is replaced with a single underscore and the result is lowercased. While the MCP specification treats tool names as opaque strings, some LLM clients (such as Anthropic Claude and Google Gemini) reject names that contain `.` or `-`, whereas `_` is accepted across all tested providers.
 
 For backward compatibility, `tools/call` requests still resolve actions referenced by their previous, un-normalized name (for example `my-custom-plugin.greet-user`), so existing clients continue to work without changes.
 
