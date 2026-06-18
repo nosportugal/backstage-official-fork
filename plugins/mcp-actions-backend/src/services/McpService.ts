@@ -58,7 +58,7 @@ function safeStringify(value: unknown): string {
 // across all tested providers, so we replace any run of characters outside the
 // `[A-Za-z0-9_]` set with a single underscore.
 function snakeCaseToolName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9_]+/g, '_');
+  return name.replace(/[^a-zA-Z0-9_]+/g, '_').toLowerCase();
 }
 
 // Baggage is propagated from untrusted callers, so we forward only an
