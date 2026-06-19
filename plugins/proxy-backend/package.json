@@ -53,7 +53,7 @@
     "@backstage/plugin-proxy-node": "workspace:^",
     "@backstage/types": "workspace:^",
     "express-promise-router": "^4.1.0",
-    "http-proxy-middleware": "^2.0.0"
+    "http-proxy-middleware": "^4.1.1"
   },
   "devDependencies": {
     "@backstage/backend-app-api": "workspace:^",
