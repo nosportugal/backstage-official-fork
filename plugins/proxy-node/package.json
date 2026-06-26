@@ -49,7 +49,7 @@
   },
   "dependencies": {
     "@backstage/backend-plugin-api": "workspace:^",
-    "http-proxy-middleware": "^2.0.0"
+    "http-proxy-middleware": "^2.0.10"
   },
   "devDependencies": {
     "@backstage/backend-test-utils": "workspace:^",
