@@ -72,7 +72,7 @@
     "@aws-sdk/util-stream-node": "^3.350.0",
     "@backstage/backend-test-utils": "workspace:^",
     "@backstage/cli": "workspace:^",
-    "yaml": "^2.0.0"
+    "yaml": "^2.9.1"
   },
   "configSchema": "config.d.ts"
 }

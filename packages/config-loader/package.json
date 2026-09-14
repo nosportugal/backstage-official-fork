@@ -50,7 +50,7 @@
     "minimist": "^1.2.5",
     "ts-json-schema-generator": "^2.9.0",
     "typescript": "^5.9.3",
-    "yaml": "^2.0.0"
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@backstage/backend-test-utils": "workspace:^",

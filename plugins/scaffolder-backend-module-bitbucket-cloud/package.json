@@ -50,7 +50,7 @@
     "@backstage/plugin-scaffolder-node": "workspace:^",
     "bitbucket": "^2.12.0",
     "fs-extra": "^11.2.0",
-    "yaml": "^2.0.0",
+    "yaml": "^2.9.1",
     "zod": "^3.25.76 || ^4.0.0"
   },
   "devDependencies": {
